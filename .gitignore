@@ -1,0 +1,24 @@
+# v0 sandbox internal files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.v0-trash/
+.vercel/
+
+# Environment variables
+# .env contiene la contrasena de PostgreSQL y AUTH_SECRET: nunca se sube.
+# .env.example si se sube (solo documenta los nombres, sin valores reales).
+.env
+.env*.local
+!.env.example
+
+# Common ignores
+node_modules
+.next/
+.DS_Store
+# Imagenes subidas desde el panel (lib/storage/uploads.ts)
+storage/
+
+# Cache de compilacion de TypeScript
+*.tsbuildinfo

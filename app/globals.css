@@ -1,0 +1,332 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Hero en pantallas verticales (moviles y tablets en vertical): el video 16:9
+   no cabe con object-cover sin cortar la gorra, asi que se apila encima del
+   texto. Nunca aplica en escritorio (lg+) */
+@custom-variant hero-stack (@media (max-width: 1023.98px) and (orientation: portrait));
+/* Verticales muy bajos (p. ej. 320x568): gorra algo menor para que el texto
+   no se monte sobre la visera */
+@custom-variant hero-tight (@media (max-width: 1023.98px) and (orientation: portrait) and (max-height: 640px));
+/* Moviles en horizontal: muy poca altura para la escala de texto de md */
+@custom-variant hero-short (@media (max-height: 500px) and (orientation: landscape));
+
+:root {
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(0.97 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(0.985 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.145 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.75rem;
+  --surface: oklch(0.96 0 0);
+  --surface-foreground: oklch(0.3 0 0);
+  --glow: oklch(0.75 0.02 250);
+}
+
+.dark {
+  --background: oklch(0.1 0 0);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.14 0 0);
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.12 0 0);
+  --popover-foreground: oklch(0.95 0 0);
+  --primary: oklch(0.95 0 0);
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.2 0 0);
+  --secondary-foreground: oklch(0.9 0 0);
+  --muted: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.6 0 0);
+  --accent: oklch(0.18 0 0);
+  --accent-foreground: oklch(0.95 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.22 0 0);
+  --input: oklch(0.22 0 0);
+  --ring: oklch(0.45 0 0);
+  --surface: oklch(0.16 0 0);
+  --surface-foreground: oklch(0.75 0 0);
+  --glow: oklch(0.6 0.03 250);
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Geist', 'Geist Fallback', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-glow: var(--glow);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    scroll-behavior: smooth;
+    /* El navbar es fixed: sin esto el ancla #catalogo deja el titulo debajo de el */
+    scroll-padding-top: 5rem;
+    /* Red de seguridad: evita scroll horizontal accidental en moviles.
+       Se aplica solo en html para que el overflow se propague al viewport
+       y no cree un contenedor de recorte que afecte al navbar fixed. */
+    overflow-x: hidden;
+  }
+}
+
+/* Fondo animado de la tienda (components/ui/kinetic-grid.tsx). El canvas va
+   fijo con z-index negativo, detras de todo el contenido; para que se vea, el
+   body deja de pintar su fondo mientras el canvas existe. El color no cambia:
+   el html ya pinta --background (bg-background en app/layout.tsx). Sin
+   soporte de :has() el body sigue opaco y la tienda queda como antes. */
+body:has(> [data-kinetic-grid]) {
+  background-color: transparent;
+}
+
+/* Texto en particulas del Hero (components/ui/text-particle.tsx). Cuando las
+   particulas ya estan pintadas, el texto del DOM deja de rellenarse: sigue
+   ocupando su sitio, se puede leer con lector de pantalla y conserva su
+   text-shadow, pero lo que se ve son las particulas. `color` no cambia, asi
+   que el canvas lo sigue leyendo (modo claro/oscuro y hover). */
+[data-text-particle="ready"] {
+  -webkit-text-fill-color: transparent;
+}
+
+/* Columna fija del formulario de productos (Organizacion). Al abrir un Select,
+   Radix bloquea el scroll con body[data-scroll-locked] { overflow: hidden }.
+   Como html ya tiene overflow-x: hidden, ese overflow no se propaga al viewport:
+   convierte al body en contenedor de scroll y la columna sticky pasa a
+   posicionarse respecto a el (que nunca se desplaza), asi que salta a su sitio
+   original y desaparece de la vista. Mientras ese formulario este en pantalla
+   se deja el body sin recorte; el bloqueo de rueda/tactil de Radix sigue
+   activo, asi que la pagina tampoco se mueve con el desplegable abierto. */
+body[data-scroll-locked]:has([data-sticky-sidebar]) {
+  overflow: visible !important;
+  margin-right: 0 !important;
+}
+
+/* Fundido del final del Hero al fondo de la pagina. Usa --background, asi que
+   termina exactamente en el color de fondo de cada modo. Varias paradas
+   (curva suave) para que el paso de negro a claro no deje una banda gris */
+@utility hero-bottom-fade {
+  background-image: linear-gradient(
+    to top,
+    var(--background) 0%,
+    color-mix(in oklab, var(--background) 88%, transparent) 18%,
+    color-mix(in oklab, var(--background) 62%, transparent) 40%,
+    color-mix(in oklab, var(--background) 30%, transparent) 64%,
+    color-mix(in oklab, var(--background) 9%, transparent) 84%,
+    transparent 100%
+  );
+}
+
+/* iOS hace zoom automatico al enfocar un campo con texto < 16px y deja la
+   pagina ampliada. Fuera de @layer para ganar a utilidades como text-sm */
+@media (max-width: 767.98px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.4 0 0);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0 0);
+}
+
+/* --- Fechas especiales (components/seasonal) ------------------------------
+   Estas reglas solo actuan mientras SeasonalEffects renderiza su marcador
+   [data-season], es decir, con la temporada activa y fuera del panel. */
+@keyframes season-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.season-twinkle {
+  animation: season-twinkle 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .season-twinkle {
+    animation: none;
+  }
+}
+
+/* Navidad: seleccion de texto en rojo navideno. */
+:root:has([data-season="navidad"]) ::selection {
+  background-color: rgb(200 16 46 / 0.6);
+  color: #fff;
+}
+
+/* --- Cinta marquesina de beneficios (components/benefits-marquee.tsx) -----
+   La pista tiene dos mitades identicas: al moverse -50% vuelve al inicio sin
+   salto. Los bordes se difuminan con una mascara para una entrada suave. */
+@keyframes benefits-marquee-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* La mascara vuelve transparentes los bordes superior e inferior de la cinta,
+   de modo que se ve el fondo real de la pagina debajo y la cinta se funde con
+   el Hero (arriba) y la seccion de productos (abajo): funciona igual en modo
+   claro y oscuro sin depender de colores. El alto del difuminado (30%) cae
+   dentro del padding vertical (py-3.5 / md:py-4), asi el texto queda siempre
+   opaco. La curva tiene paradas intermedias para un desvanecimiento suave. */
+.benefits-marquee {
+  --marquee-fade: 30%;
+  --marquee-fade-mask: linear-gradient(
+    to bottom,
+    transparent 0,
+    rgb(0 0 0 / 0.12) calc(var(--marquee-fade) * 0.25),
+    rgb(0 0 0 / 0.45) calc(var(--marquee-fade) * 0.5),
+    rgb(0 0 0 / 0.85) calc(var(--marquee-fade) * 0.8),
+    #000 var(--marquee-fade),
+    #000 calc(100% - var(--marquee-fade)),
+    rgb(0 0 0 / 0.85) calc(100% - var(--marquee-fade) * 0.8),
+    rgb(0 0 0 / 0.45) calc(100% - var(--marquee-fade) * 0.5),
+    rgb(0 0 0 / 0.12) calc(100% - var(--marquee-fade) * 0.25),
+    transparent 100%
+  );
+  -webkit-mask-image: var(--marquee-fade-mask);
+  mask-image: var(--marquee-fade-mask);
+}
+
+.benefits-marquee-track {
+  /* La duracion la calcula el componente segun el ancho del texto */
+  animation: benefits-marquee-scroll var(--marquee-duration, 60s) linear infinite;
+  will-change: transform;
+}
+
+.benefits-marquee:hover .benefits-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .benefits-marquee-track {
+    animation-duration: calc(var(--marquee-duration, 60s) * 3);
+  }
+}
+
+/* --- Boton "Guia de tallas" de Gorras (components/catalog-page.tsx) --------
+   Rebote corto cada pocos segundos y un halo naranja que se expande y se
+   desvanece. El halo es un pseudo-elemento para que su animacion no choque
+   con la del boton. En hover el rebote se detiene y el boton se eleva. */
+@keyframes size-guide-bounce {
+  0%, 30%, 100% {
+    transform: translateY(0);
+  }
+  10% {
+    transform: translateY(-3px);
+  }
+  20% {
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes size-guide-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(249 115 22 / 0.5);
+  }
+  70%, 100% {
+    box-shadow: 0 0 0 10px rgb(249 115 22 / 0);
+  }
+}
+
+.size-guide-cta {
+  position: relative;
+  animation: size-guide-bounce 2.8s ease-in-out infinite;
+  transition:
+    transform 0.3s ease-out,
+    background-color 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+
+.size-guide-cta::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: size-guide-pulse 2.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Solo en dispositivos con raton: en movil el hover se quedaria pegado */
+@media (hover: hover) {
+  .size-guide-cta:hover {
+    animation: none;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 10px 24px -8px rgb(249 115 22 / 0.7);
+  }
+}
+
+.size-guide-cta:active {
+  animation: none;
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .size-guide-cta,
+  .size-guide-cta::after {
+    animation: none;
+  }
+}
