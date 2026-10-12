@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { SeasonProvider } from "@/components/seasonal/season-provider"
 import { SeasonalEffects } from "@/components/seasonal/seasonal-effects"
 import { StoreBackground } from "@/components/store-background"
+import { WhatsAppButton } from "@/components/whatsapp-button"
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt"
 import { loadActiveSeason } from "@/lib/seasons/active-season"
 import "./globals.css"
 
@@ -24,7 +26,14 @@ export const metadata: Metadata = {
       { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
-    apple: "/apple-icon.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  // iOS: nombre y barra de estado cuando se abre desde la pantalla de inicio
+  // (el resto de la PWA esta en app/manifest.ts).
+  appleWebApp: {
+    capable: true,
+    title: "STREETVIBE",
+    statusBarStyle: "black-translucent",
   },
 }
 
@@ -61,6 +70,10 @@ export default async function RootLayout({
             {children}
             <SeasonalEffects />
           </SeasonProvider>
+          {/* Contacto por WhatsApp en toda la tienda (no en el panel) */}
+          <WhatsAppButton />
+          {/* Invitacion a instalar la tienda tras 1 min navegando */}
+          <PwaInstallPrompt />
         </ThemeProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>

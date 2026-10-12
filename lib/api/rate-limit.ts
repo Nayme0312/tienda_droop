@@ -63,6 +63,62 @@ export function clearAttempts(key: string): void {
   attempts.delete(key)
 }
 
+// ---------------------------------------------------------------------------
+// Limitador por peticion (endpoints publicos)
+// ---------------------------------------------------------------------------
+
+export interface RequestLimiter {
+  /** Registra una peticion de `key` y dice si se permite. */
+  hit(key: string): RateLimitResult
+}
+
+/** Tope de claves vivas por limitador, para que un ataque con muchas IPs no agote la memoria. */
+const MAX_TRACKED_KEYS = 10_000
+
+/**
+ * A diferencia del limitador del login (que solo cuenta fallos), este cuenta
+ * TODAS las peticiones: `limit` como maximo en cada ventana de `windowMs`.
+ * Cada limitador tiene su propio mapa, asi que no comparte contadores con
+ * ningun otro endpoint. Misma limitacion conocida: vive en memoria del proceso.
+ */
+export function createRequestLimiter(options: {
+  limit: number
+  windowMs: number
+}): RequestLimiter {
+  const hits = new Map<string, Attempt>()
+
+  return {
+    hit(key) {
+      const now = Date.now()
+      const current = hits.get(key)
+
+      if (!current || current.resetAt <= now) {
+        if (hits.size >= MAX_TRACKED_KEYS) {
+          for (const [k, entry] of hits) {
+            if (entry.resetAt <= now) hits.delete(k)
+          }
+          // Si aun esta lleno, se descarta la clave mas antigua.
+          if (hits.size >= MAX_TRACKED_KEYS) {
+            const oldest = hits.keys().next().value
+            if (oldest !== undefined) hits.delete(oldest)
+          }
+        }
+        hits.set(key, { count: 1, resetAt: now + options.windowMs })
+        return { allowed: true, retryAfterSeconds: 0 }
+      }
+
+      current.count += 1
+      if (current.count > options.limit) {
+        return {
+          allowed: false,
+          retryAfterSeconds: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
+        }
+      }
+      return { allowed: true, retryAfterSeconds: 0 }
+    },
+  }
+}
+
 /**
  * Identifica al cliente. Detras de un proxy se usa la primera IP de
  * x-forwarded-for; si no hay ninguna cabecera, se agrupa todo bajo "unknown",

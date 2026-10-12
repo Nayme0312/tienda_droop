@@ -190,6 +190,24 @@ export interface AdminCapType {
   productCount: number
 }
 
+/** Testimonio de cliente tal como lo ve el panel (activos e inactivos). */
+export interface AdminTestimonial {
+  id: string
+  customerName: string
+  avatarUrl: string | null
+  /** De 1 a 5. */
+  rating: number
+  comment: string
+  productName: string | null
+  isVerified: boolean
+  /** Inactivo: no aparece en la portada. */
+  isActive: boolean
+  /** ISO 8601. Fecha de la resena; de ella sale el "hace 1 mes" de la tienda. */
+  reviewedAt: string
+  createdAt: string
+  updatedAt: string
+}
+
 /** Fecha especial (temporada visual de la tienda) tal como la ve el panel. */
 export interface AdminSpecialDate {
   id: string

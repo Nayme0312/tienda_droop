@@ -1,6 +1,7 @@
 import { loadHomeCatalog } from '@/lib/api/public-products'
 import { loadMarqueeText } from '@/lib/marquee/load-marquee'
 import { loadHeroMedia } from '@/lib/hero/load-hero'
+import { loadTestimonials } from '@/lib/testimonials/load-testimonials'
 import HomeClient from './home-client'
 
 /**
@@ -17,8 +18,13 @@ import HomeClient from './home-client'
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const [{ sections, productsBySlug }, marqueeText, heroMedia] =
-    await Promise.all([loadHomeCatalog(), loadMarqueeText(), loadHeroMedia()])
+  const [{ sections, productsBySlug }, marqueeText, heroMedia, testimonials] =
+    await Promise.all([
+      loadHomeCatalog(),
+      loadMarqueeText(),
+      loadHeroMedia(),
+      loadTestimonials(),
+    ])
 
   return (
     <HomeClient
@@ -26,6 +32,7 @@ export default async function HomePage() {
       productsBySlug={productsBySlug}
       marqueeText={marqueeText}
       heroMedia={heroMedia}
+      testimonials={testimonials}
     />
   )
 }

@@ -32,6 +32,9 @@ export const API_ROUTES = {
   capType: (id: string) => `/api/admin/cap-types/${encodeURIComponent(id)}`,
   specialDates: '/api/admin/special-dates',
   marquee: '/api/admin/marquee',
+  testimonials: '/api/admin/testimonials',
+  testimonial: (id: string) =>
+    `/api/admin/testimonials/${encodeURIComponent(id)}`,
   hero: '/api/admin/hero',
   specialDate: (slug: string) =>
     `/api/admin/special-dates/${encodeURIComponent(slug)}`,
@@ -44,6 +47,7 @@ export const API_ROUTES = {
   order: (id: string) => `/api/admin/orders/${encodeURIComponent(id)}`,
   sales: '/api/admin/sales',
   analytics: '/api/admin/analytics',
+  newsletter: '/api/newsletter',
   checkout: '/api/checkout',
   checkoutQuote: '/api/checkout/quote',
   checkoutStatus: (transactionId: string) =>

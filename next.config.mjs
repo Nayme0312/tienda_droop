@@ -12,6 +12,18 @@ const nextConfig = {
     // (MAX_VIDEO_BYTES en lib/storage/uploads.ts) mas el sobre multipart.
     proxyClientMaxBodySize: '55mb',
   },
+  async headers() {
+    return [
+      {
+        // El navegador debe revisar siempre si hay un service worker nuevo.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+        ],
+      },
+    ]
+  },
 }
 
 export default nextConfig

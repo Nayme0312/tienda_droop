@@ -12,6 +12,7 @@ import { Footer } from '@/components/footer'
 import type { Product, StoreSection } from '@/lib/products'
 import { sectionShortCopy } from '@/lib/sections'
 import type { HeroMedia } from '@/lib/hero/hero'
+import type { PublicTestimonial } from '@/lib/testimonials/testimonials'
 
 /**
  * Parte interactiva de la portada. Las secciones llegan ya filtradas por
@@ -22,6 +23,7 @@ export default function HomeClient({
   productsBySlug,
   marqueeText,
   heroMedia,
+  testimonials,
 }: {
   sections: StoreSection[]
   productsBySlug: Record<string, Product[]>
@@ -29,6 +31,8 @@ export default function HomeClient({
   marqueeText: string | null
   /** Medio del Hero; null si esta desactivado en el panel. */
   heroMedia: HeroMedia | null
+  /** Testimonios activos; vacio = la seccion no se muestra. */
+  testimonials: PublicTestimonial[]
 }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
@@ -77,7 +81,7 @@ export default function HomeClient({
           )}
         </div>
 
-        <TestimonialsSection />
+        <TestimonialsSection testimonials={testimonials} />
       </main>
 
       <Footer />

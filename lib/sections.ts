@@ -21,6 +21,10 @@ export const RESERVED_SECTION_SLUGS = new Set([
   'checkout',
   'images',
   'streepanel-84m2',
+  // Paginas legales (app/(legal)/)
+  'terminos-y-condiciones',
+  'politica-de-privacidad',
+  'politicas-de-envio-y-devoluciones',
   // Panel
   'login',
   'productos',

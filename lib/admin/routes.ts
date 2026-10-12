@@ -20,6 +20,7 @@ export const adminRoutes = {
   specialDates: `${ADMIN_BASE_PATH}/fechas-especiales`,
   marquee: `${ADMIN_BASE_PATH}/cinta-marquesina`,
   hero: `${ADMIN_BASE_PATH}/hero`,
+  testimonials: `${ADMIN_BASE_PATH}/testimonios`,
   promotions: `${ADMIN_BASE_PATH}/promociones`,
   newPromotion: `${ADMIN_BASE_PATH}/promociones/nueva`,
   editPromotion: (id: string) => `${ADMIN_BASE_PATH}/promociones/${id}/editar`,

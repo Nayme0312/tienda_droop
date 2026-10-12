@@ -330,3 +330,29 @@ body[data-scroll-locked]:has([data-sticky-sidebar]) {
     animation: none;
   }
 }
+
+/* --- Boton flotante de WhatsApp (components/whatsapp-button.tsx) ----------
+   Una onda sutil que se expande y desvanece desde el boton, con pausa entre
+   pulsos para que no distraiga. */
+@keyframes whatsapp-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  60%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.whatsapp-ping {
+  animation: whatsapp-ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whatsapp-ping {
+    animation: none;
+    opacity: 0;
+  }
+}

@@ -256,6 +256,22 @@ export function CheckoutView({ sections }: { sections: StoreSection[] }) {
                   <Lock className="h-3 w-3" />
                   El pago se realiza en la plataforma segura de Wompi.
                 </p>
+                {/* Aviso de Habeas Data: continuar al pago es la autorizacion (Ley 1581 de 2012) */}
+                <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                  Al continuar aceptas los{" "}
+                  <Link href="/terminos-y-condiciones" className="underline underline-offset-4 hover:text-foreground">
+                    Términos y condiciones
+                  </Link>
+                  , la{" "}
+                  <Link href="/politicas-de-envio-y-devoluciones" className="underline underline-offset-4 hover:text-foreground">
+                    Política de envíos y devoluciones
+                  </Link>{" "}
+                  y autorizas el tratamiento de tus datos según la{" "}
+                  <Link href="/politica-de-privacidad" className="underline underline-offset-4 hover:text-foreground">
+                    Política de privacidad
+                  </Link>
+                  .
+                </p>
               </form>
 
               {/* Resumen calculado por el servidor */}

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>Sin conexión | STREETVIBE</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #0a0a0a;
+        color: #f2f2f2;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+      }
+      .logo {
+        display: inline-block;
+        padding: 6px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        font-size: 18px;
+      }
+      h1 { margin: 32px 0 8px; font-size: 22px; }
+      p { margin: 0 auto; max-width: 320px; color: #a3a3a3; line-height: 1.5; font-size: 15px; }
+      button {
+        margin-top: 28px;
+        padding: 12px 28px;
+        border: 0;
+        border-radius: 999px;
+        background: #f2f2f2;
+        color: #0a0a0a;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="logo">STREETVIBE</span>
+      <h1>Estás sin conexión</h1>
+      <p>Revisa tu internet e inténtalo de nuevo. Tu carrito sigue guardado.</p>
+      <button type="button" onclick="location.reload()">Reintentar</button>
+    </main>
+  </body>
+</html>

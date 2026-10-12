@@ -358,3 +358,41 @@ model HeroSettings {
 
   @@map("hero_settings")
 }
+
+/// Testimonio de cliente que muestra la portada ("Lo Que Dicen"). Se gestiona
+/// a mano desde el panel: crear, editar, eliminar y activar/desactivar. Solo
+/// los activos llegan a la tienda, ordenados del mas reciente al mas antiguo.
+model Testimonial {
+  id           String   @id @default(cuid())
+  customerName String
+  /// Foto del cliente (ruta de /api/uploads). Sin ella, la tienda muestra sus iniciales.
+  avatarUrl    String?
+  /// De 1 a 5 (lo garantiza la API y un CHECK en la base de datos).
+  rating       Int
+  comment      String
+  /// Producto que compro, opcional ("Camisa Chaos").
+  productName  String?
+  /// Insignia de "Compra verificada".
+  isVerified   Boolean  @default(true)
+  isActive     Boolean  @default(true)
+  /// Fecha de la resena: de ella sale el "hace 1 mes" de la tienda.
+  reviewedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive, reviewedAt])
+  @@map("testimonials")
+}
+
+/// Suscriptor del boletin (formulario "Unete al Movimiento" del pie de pagina).
+/// El email se guarda en minusculas y es unico: suscribirse dos veces no crea
+/// otra fila ni reenvia la bienvenida. `welcomeSentAt` queda en null si el
+/// email de bienvenida no se pudo enviar (Resend caido o sin configurar).
+model NewsletterSubscriber {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  createdAt     DateTime  @default(now())
+  welcomeSentAt DateTime?
+
+  @@map("newsletter_subscribers")
+}

@@ -9,6 +9,7 @@ import {
   LoaderCircle,
   LogOut,
   Megaphone,
+  MessageSquareQuote,
   MonitorPlay,
   Package,
   PartyPopper,
@@ -66,6 +67,11 @@ const SETTINGS_ITEMS: NavItem[] = [
   },
   { label: 'Hero de portada', href: adminRoutes.hero, icon: MonitorPlay },
   { label: 'Cinta marquesina', href: adminRoutes.marquee, icon: Megaphone },
+  {
+    label: 'Testimonios',
+    href: adminRoutes.testimonials,
+    icon: MessageSquareQuote,
+  },
   { label: 'Configuracion', href: adminRoutes.settings, icon: Settings },
 ]
 
