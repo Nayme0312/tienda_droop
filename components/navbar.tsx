@@ -9,6 +9,7 @@ import { useCartStore } from "@/lib/cart-store"
 import type { StoreSection } from "@/lib/products"
 import { useStoreSeason } from "@/components/seasonal/season-provider"
 import { ChristmasLights } from "@/components/seasonal/christmas"
+import { NavbarSearch } from "@/components/navbar-search"
 
 /**
  * `sections` son las secciones de tienda visibles, resueltas en el servidor a
@@ -173,12 +174,7 @@ export function Navbar({ sections = [] }: { sections?: StoreSection[] }) {
               className="overflow-hidden border-t border-white/10"
             >
               <div className="mx-auto max-w-7xl px-4 py-3 md:px-6">
-                <input
-                  type="text"
-                  placeholder="Buscar productos..."
-                  className="w-full bg-transparent text-white placeholder:text-white/50 outline-none text-sm"
-                  autoFocus
-                />
+                <NavbarSearch onSearched={() => setSearchOpen(false)} />
               </div>
             </motion.div>
           )}

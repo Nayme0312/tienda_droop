@@ -18,6 +18,7 @@ export const SECTION_SLUG_MAX = 40
 export const RESERVED_SECTION_SLUGS = new Set([
   // Tienda
   'api',
+  'buscar',
   'checkout',
   'images',
   'streepanel-84m2',

@@ -40,6 +40,8 @@ interface CatalogPageProps {
    * cerradas se ofrece ademas la Guia de tallas, que filtra por talla.
    */
   capTypes?: PublicCapType[]
+  /** Texto con el que arranca el buscador (pagina /buscar). */
+  initialSearch?: string
 }
 
 /** Filtro de tipo de gorra sin seleccion ("" no es un slug valido). */
@@ -64,11 +66,12 @@ export function CatalogPage({
   title,
   description,
   capTypes,
+  initialSearch = "",
 }: CatalogPageProps) {
   const isCaps = capTypes !== undefined
   const allProducts = products
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(initialSearch)
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">(
     "default"
   )
