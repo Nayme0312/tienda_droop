@@ -1,204 +1,283 @@
+import { randomUUID } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { Readable } from 'node:stream'
 import path from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { Readable } from 'node:stream'
 
 /**
- * Almacenamiento local de las imagenes que se suben desde el panel.
+ * Almacenamiento en disco de las imagenes y videos subidos desde el panel.
  *
- * Los archivos se guardan en `storage/uploads/` (fuera de `public/`, porque Next
- * solo sirve lo que habia en `public/` al compilar) y se sirven con el route
- * handler GET /api/uploads/:file. La URL que se guarda en ProductImage es esa
- * ruta relativa, que `sanitizeImageUrl` ya acepta.
+ * Los archivos viven en <raiz del proyecto>/storage/uploads (ignorado por git)
+ * con un nombre aleatorio (uuid + extension), y se sirven publicamente en
+ * /api/uploads/<nombre>. Como el nombre nunca se reutiliza, el contenido de
+ * una URL no cambia y se puede cachear indefinidamente.
+ *
+ * SEGURIDAD: el tipo declarado por el navegador no basta; se confirma con la
+ * firma real del archivo (magic bytes). Al leer, el nombre se valida con una
+ * expresion estricta para que nunca pueda salir de la carpeta de uploads.
  */
-export const UPLOADS_DIR = path.join(process.cwd(), 'storage', 'uploads')
-export const UPLOADS_PUBLIC_PATH = '/api/uploads'
+
+/** Limite de las imagenes (5 MB). */
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
-/** Limite de los videos. Debe caber en proxyClientMaxBodySize (next.config.mjs). */
+
+/** Limite de los videos (50 MB). Debe coincidir con components/admin/video-uploader.tsx. */
 export const MAX_VIDEO_BYTES = 50 * 1024 * 1024
 
-/** Tipos admitidos, con la extension con la que se guardan. */
-export const IMAGE_TYPES: Record<string, string> = {
-  'image/jpeg': 'jpg',
+const UPLOADS_DIR = path.join(process.cwd(), 'storage', 'uploads')
+const PUBLIC_PREFIX = '/api/uploads/'
+
+type ImageFormat = 'png' | 'jpg' | 'webp' | 'gif' | 'avif'
+type VideoFormat = 'mp4' | 'mov' | 'webm'
+
+const IMAGE_MIME_TO_FORMAT: Record<string, ImageFormat> = {
   'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/pjpeg': 'jpg',
   'image/webp': 'webp',
   'image/gif': 'gif',
   'image/avif': 'avif',
 }
 
-/** Videos admitidos. MOV es el formato que graba el iPhone. */
-export const VIDEO_TYPES: Record<string, string> = {
+const VIDEO_MIME_TO_FORMAT: Record<string, VideoFormat> = {
   'video/mp4': 'mp4',
-  'video/webm': 'webm',
   'video/quicktime': 'mov',
+  'video/webm': 'webm',
 }
 
-const CONTENT_TYPES: Record<string, string> = Object.fromEntries(
-  Object.entries({ ...IMAGE_TYPES, ...VIDEO_TYPES }).map(([type, ext]) => [
-    ext,
-    type,
-  ]),
-)
+const CONTENT_TYPES: Record<ImageFormat | VideoFormat, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  avif: 'image/avif',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  webm: 'video/webm',
+}
 
-/** Nombre generado por saveImage/saveVideo: uuid + extension conocida. */
-const FILE_NAME_PATTERN =
-  /^[0-9a-f-]{36}\.(jpg|png|webp|gif|avif|mp4|webm|mov)$/
+const IMAGE_EXTENSIONS = new Set<string>(['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif'])
+const VIDEO_EXTENSIONS = new Set<string>(['mp4', 'mov', 'webm'])
 
-const VIDEO_EXTENSIONS = new Set(Object.values(VIDEO_TYPES))
+/** Nombre seguro: sin rutas, sin puntos extra, solo una extension conocida. */
+const SAFE_FILE_NAME = /^[A-Za-z0-9_-]{1,128}\.([A-Za-z0-9]{2,5})$/
+
+// ---------------------------------------------------------------------------
+// Firmas (magic bytes)
+// ---------------------------------------------------------------------------
+
+function ascii(bytes: Uint8Array, offset: number, length: number): string {
+  if (bytes.length < offset + length) return ''
+  return String.fromCharCode(...bytes.subarray(offset, offset + length))
+}
+
+function startsWith(bytes: Uint8Array, signature: number[]): boolean {
+  if (bytes.length < signature.length) return false
+  return signature.every((byte, i) => bytes[i] === byte)
+}
+
+/** Formato real de una imagen segun su firma, o null si no es reconocida. */
+function detectImageFormat(bytes: Uint8Array): ImageFormat | null {
+  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'png'
+  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return 'jpg'
+  if (ascii(bytes, 0, 6) === 'GIF87a' || ascii(bytes, 0, 6) === 'GIF89a') return 'gif'
+  if (ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP') return 'webp'
+  if (ascii(bytes, 4, 4) === 'ftyp') {
+    const brand = ascii(bytes, 8, 4)
+    if (brand === 'avif' || brand === 'avis') return 'avif'
+  }
+  return null
+}
+
+/** Contenedor real de un video segun su firma, o null si no es reconocido. */
+function detectVideoContainer(bytes: Uint8Array): 'isobmff' | 'webm' | null {
+  // WebM / Matroska: cabecera EBML.
+  if (startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3])) return 'webm'
+  // MP4 y MOV (ISO base media / QuickTime): primer atomo en el byte 4.
+  const atom = ascii(bytes, 4, 4)
+  if (atom === 'ftyp') {
+    const brand = ascii(bytes, 8, 4)
+    // Una imagen AVIF tambien usa ftyp: no se acepta como video.
+    if (brand === 'avif' || brand === 'avis') return null
+    return 'isobmff'
+  }
+  if (atom === 'moov' || atom === 'mdat' || atom === 'wide' || atom === 'free') {
+    return 'isobmff'
+  }
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// Escritura
+// ---------------------------------------------------------------------------
+
+async function writeUpload(bytes: Uint8Array, extension: string): Promise<string> {
+  await mkdir(UPLOADS_DIR, { recursive: true })
+  const fileName = `${randomUUID()}.${extension}`
+  // 'wx': falla si el archivo ya existe; nunca sobrescribe otro upload.
+  await writeFile(path.join(UPLOADS_DIR, fileName), bytes, { flag: 'wx' })
+  return `${PUBLIC_PREFIX}${fileName}`
+}
 
 /**
- * Comprueba la firma real del archivo: el `type` del File lo decide el
- * navegador y no basta para fiarse del contenido.
+ * Guarda una imagen y devuelve su URL publica, o null si el tipo declarado no
+ * esta admitido o no coincide con la firma real del archivo.
  */
-function matchesSignature(bytes: Uint8Array, ext: string): boolean {
-  const ascii = (start: number, end: number) =>
-    String.fromCharCode(...bytes.subarray(start, end))
-  switch (ext) {
-    case 'jpg':
-      return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
-    case 'png':
-      return ascii(1, 4) === 'PNG'
-    case 'gif':
-      return ascii(0, 4) === 'GIF8'
-    case 'webp':
-      return ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP'
-    // AVIF, MP4 y MOV comparten contenedor ISO: caja 'ftyp' en el byte 4.
-    case 'avif':
-    case 'mp4':
-    case 'mov':
-      return ascii(4, 8) === 'ftyp'
-    case 'webm':
-      return (
-        bytes[0] === 0x1a &&
-        bytes[1] === 0x45 &&
-        bytes[2] === 0xdf &&
-        bytes[3] === 0xa3
-      )
-    default:
-      return false
-  }
-}
-
-/** Guarda la imagen y devuelve la URL con la que se sirve. */
 export async function saveImage(
   bytes: Uint8Array,
-  contentType: string,
+  mimeType: string,
 ): Promise<string | null> {
-  return saveFile(bytes, IMAGE_TYPES[contentType])
+  if (bytes.length === 0 || bytes.length > MAX_UPLOAD_BYTES) return null
+
+  const declared = IMAGE_MIME_TO_FORMAT[mimeType.toLowerCase()]
+  const detected = detectImageFormat(bytes)
+  if (!declared || !detected || declared !== detected) return null
+
+  return writeUpload(bytes, detected)
 }
 
-/** Guarda el video y devuelve la URL con la que se sirve. */
+/**
+ * Guarda un video (MP4, MOV o WEBM) y devuelve su URL publica, o null si el
+ * tipo declarado no esta admitido o no coincide con la firma real.
+ */
 export async function saveVideo(
   bytes: Uint8Array,
-  contentType: string,
+  mimeType: string,
 ): Promise<string | null> {
-  return saveFile(bytes, VIDEO_TYPES[contentType])
+  if (bytes.length === 0 || bytes.length > MAX_VIDEO_BYTES) return null
+
+  const declared = VIDEO_MIME_TO_FORMAT[mimeType.toLowerCase()]
+  const container = detectVideoContainer(bytes)
+  if (!declared || !container) return null
+  if ((declared === 'webm') !== (container === 'webm')) return null
+
+  return writeUpload(bytes, declared)
 }
 
-async function saveFile(
-  bytes: Uint8Array,
-  ext: string | undefined,
-): Promise<string | null> {
-  if (!ext || !matchesSignature(bytes, ext)) return null
+// ---------------------------------------------------------------------------
+// Lectura
+// ---------------------------------------------------------------------------
 
-  const fileName = `${randomUUID()}.${ext}`
-  await mkdir(UPLOADS_DIR, { recursive: true })
-  await writeFile(path.join(UPLOADS_DIR, fileName), bytes)
-  return `${UPLOADS_PUBLIC_PATH}/${fileName}`
+function extensionOf(fileName: string): string | null {
+  const match = SAFE_FILE_NAME.exec(fileName)
+  return match ? match[1].toLowerCase() : null
 }
 
-/** Lee una imagen subida. null si el nombre no es valido o no existe. */
+function resolveUpload(fileName: string): string | null {
+  if (!extensionOf(fileName)) return null
+  const fullPath = path.join(UPLOADS_DIR, fileName)
+  // Defensa adicional: la ruta final debe seguir dentro de UPLOADS_DIR.
+  if (path.dirname(fullPath) !== UPLOADS_DIR) return null
+  return fullPath
+}
+
+function contentTypeFor(extension: string): string {
+  if (extension === 'jpeg') return CONTENT_TYPES.jpg
+  return CONTENT_TYPES[extension as ImageFormat | VideoFormat] ?? 'application/octet-stream'
+}
+
+/** Indica si el nombre corresponde a un video (se sirve por rangos). */
+export function isVideoFile(fileName: string): boolean {
+  const extension = extensionOf(fileName)
+  return extension !== null && VIDEO_EXTENSIONS.has(extension)
+}
+
+/** Lee una imagen subida, o null si el nombre no es valido o no existe. */
 export async function readImage(
   fileName: string,
 ): Promise<{ bytes: Buffer; contentType: string } | null> {
-  // Solo nombres generados por saveImage: evita rutas como "../.env".
-  if (!FILE_NAME_PATTERN.test(fileName)) return null
-  const ext = fileName.split('.').pop() as string
+  const extension = extensionOf(fileName)
+  if (!extension || !IMAGE_EXTENSIONS.has(extension)) return null
+
+  const fullPath = resolveUpload(fileName)
+  if (!fullPath) return null
+
   try {
-    const bytes = await readFile(path.join(UPLOADS_DIR, fileName))
-    return { bytes, contentType: CONTENT_TYPES[ext] }
+    const bytes = await readFile(fullPath)
+    return { bytes, contentType: contentTypeFor(extension) }
   } catch {
     return null
   }
 }
 
-/** true si el nombre corresponde a un video subido. */
-export function isVideoFile(fileName: string): boolean {
-  return (
-    FILE_NAME_PATTERN.test(fileName) &&
-    VIDEO_EXTENSIONS.has(fileName.split('.').pop() as string)
-  )
-}
-
 export type OpenedVideo =
-  | { kind: 'unsatisfiable'; size: number }
   | {
       kind: 'ok'
       stream: ReadableStream<Uint8Array>
       contentType: string
-      size: number
       start: number
       end: number
-      /** true si se pidio un rango: la respuesta es 206. */
+      size: number
       partial: boolean
     }
+  | { kind: 'unsatisfiable'; size: number }
 
 /**
- * Abre un video subido para servirlo, entero o por rangos ("Range: bytes=a-b").
- *
- * Los navegadores piden los videos por trozos para poder avanzar y empezar a
- * reproducir sin descargarlos enteros, y Safari en iPhone no los reproduce si
- * el servidor no responde 206 a esas peticiones. Se lee del disco en
- * streaming, sin cargar el archivo entero en memoria.
- *
- * null si el nombre no es valido o el archivo no existe.
+ * Interpreta una cabecera Range de un solo rango ("bytes=a-b", "bytes=a-",
+ * "bytes=-n"). Devuelve null si no hay cabecera o no se entiende (se sirve el
+ * archivo completo) y 'unsatisfiable' si el rango cae fuera del archivo.
+ */
+function parseRange(
+  header: string | null,
+  size: number,
+): { start: number; end: number } | 'unsatisfiable' | null {
+  if (!header) return null
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim())
+  if (!match) return null
+
+  const [, rawStart, rawEnd] = match
+  if (rawStart === '' && rawEnd === '') return null
+
+  if (rawStart === '') {
+    // Sufijo: los ultimos n bytes.
+    const suffix = Number(rawEnd)
+    if (suffix === 0) return 'unsatisfiable'
+    return { start: Math.max(0, size - suffix), end: size - 1 }
+  }
+
+  const start = Number(rawStart)
+  const end = rawEnd === '' ? size - 1 : Math.min(Number(rawEnd), size - 1)
+  if (start >= size || start > end) return 'unsatisfiable'
+  return { start, end }
+}
+
+/**
+ * Abre un video para servirlo, completo o por rangos. Devuelve null si el
+ * nombre no es valido o el archivo no existe.
  */
 export async function openVideo(
   fileName: string,
   rangeHeader: string | null,
 ): Promise<OpenedVideo | null> {
-  if (!isVideoFile(fileName)) return null
-  const filePath = path.join(UPLOADS_DIR, fileName)
+  const extension = extensionOf(fileName)
+  if (!extension || !VIDEO_EXTENSIONS.has(extension)) return null
+
+  const fullPath = resolveUpload(fileName)
+  if (!fullPath) return null
 
   let size: number
   try {
-    size = (await stat(filePath)).size
+    const info = await stat(fullPath)
+    if (!info.isFile()) return null
+    size = info.size
   } catch {
     return null
   }
 
-  let start = 0
-  let end = size - 1
-  let partial = false
+  const range = parseRange(rangeHeader, size)
+  if (range === 'unsatisfiable') return { kind: 'unsatisfiable', size }
 
-  if (rangeHeader) {
-    const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim())
-    if (!match || (match[1] === '' && match[2] === '')) {
-      return { kind: 'unsatisfiable', size }
-    }
-    const [, from, to] = match
-    if (from === '') {
-      // "bytes=-500": los ultimos 500 bytes.
-      start = Math.max(0, size - Number(to))
-    } else {
-      start = Number(from)
-      if (to !== '') end = Math.min(Number(to), size - 1)
-    }
-    if (start > end || start >= size) return { kind: 'unsatisfiable', size }
-    partial = true
-  }
+  const start = range ? range.start : 0
+  const end = range ? range.end : Math.max(0, size - 1)
+  const nodeStream = createReadStream(fullPath, { start, end })
 
-  const ext = fileName.split('.').pop() as string
   return {
     kind: 'ok',
-    stream: Readable.toWeb(
-      createReadStream(filePath, { start, end }),
-    ) as ReadableStream<Uint8Array>,
-    contentType: CONTENT_TYPES[ext],
-    size,
+    stream: Readable.toWeb(nodeStream) as unknown as ReadableStream<Uint8Array>,
+    contentType: contentTypeFor(extension),
     start,
     end,
-    partial,
+    size,
+    partial: range !== null,
   }
 }

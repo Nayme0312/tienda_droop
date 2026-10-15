@@ -17,12 +17,8 @@ __v0_jsx-dev-runtime.ts
 node_modules
 .next/
 .DS_Store
-# Imagenes y videos subidos desde el panel (lib/storage/uploads.ts).
-# Anclado a la raiz con "/": un "storage/" suelto tambien ignoraba lib/storage/
-# y el codigo de uploads.ts nunca llegaba al repositorio. Se versiona la
-# carpeta vacia (.gitkeep) pero no los archivos subidos.
-/storage/uploads/*
-!/storage/uploads/.gitkeep
+# Imagenes subidas desde el panel (lib/storage/uploads.ts)
+/storage/
 
 # Cache de compilacion de TypeScript
 *.tsbuildinfo
