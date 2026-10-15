@@ -52,6 +52,11 @@ interface CartState {
   /** Cambia la cantidad sin superar el stock; si se recorta, deja el aviso. */
   updateQuantity: (productId: string, quantity: number, size?: string) => void
   clearStockNotice: () => void
+  /**
+   * Completa la referencia (code) de los productos guardados en el carrito
+   * antes de que la tienda la enviara. `codes` va de id de producto a codigo.
+   */
+  setProductCodes: (codes: Map<string, number>) => void
   clearCart: () => void
   toggleCart: () => void
   openCart: () => void
@@ -128,6 +133,17 @@ export const useCartStore = create<CartState>()(
       },
 
       clearStockNotice: () => set({ stockNotice: null }),
+
+      setProductCodes: (codes) => {
+        set({
+          items: get().items.map((item) => {
+            const code = codes.get(item.product.id)
+            return item.product.code || code === undefined
+              ? item
+              : { ...item, product: { ...item.product, code } }
+          }),
+        })
+      },
 
       clearCart: () => set({ items: [] }),
       toggleCart: () => set({ isOpen: !get().isOpen }),

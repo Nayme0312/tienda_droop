@@ -1,4 +1,5 @@
 import { ApiError, API_ROUTES, api } from '@/lib/api/client'
+import { matchesSearch, searchTokens } from '@/lib/search'
 import type {
   AdminProduct,
   ProductFilters,
@@ -36,7 +37,7 @@ export function filterProducts(
   products: AdminProduct[],
   filters: ProductFilters = {},
 ): AdminProduct[] {
-  const search = filters.search?.trim().toLowerCase() ?? ''
+  const tokens = searchTokens(filters.search ?? '')
 
   return products.filter((product) => {
     if (
@@ -53,15 +54,8 @@ export function filterProducts(
     ) {
       return false
     }
-    // Por nombre o por codigo (los codigos se comparan por su comienzo).
-    if (
-      search &&
-      !product.name.toLowerCase().includes(search) &&
-      !String(product.code).startsWith(search)
-    ) {
-      return false
-    }
-    return true
+    // Por palabras en nombre, descripcion, colores y tallas, o por codigo.
+    return matchesSearch(product, tokens)
   })
 }
 
@@ -112,7 +106,7 @@ export async function getProducts(
 }
 
 /**
- * Busca en PostgreSQL por nombre o codigo y devuelve como mucho `limit`
+ * Busca en PostgreSQL por palabras o codigo y devuelve como mucho `limit`
  * productos. La usa el buscador de "Registrar venta" para no depender de tener
  * todo el catalogo cargado.
  */

@@ -21,11 +21,11 @@ import {
   buildImageRows,
   productInclude,
   sanitizeVideoUrl,
-  productSearchWhere,
   slugify,
   toAdminProduct,
   toDbStatus,
 } from '@/lib/api/product-dto'
+import { productSearchWhere } from '@/lib/api/product-search'
 import { loadRunningPromotions } from '@/lib/api/promotion-dto'
 import { resolveProductCapTypeId } from '@/lib/api/cap-type-dto'
 
@@ -34,7 +34,7 @@ const MAX_LIMIT = 50
 /**
  * GET /api/admin/products — listado completo para el panel.
  *
- * Acepta filtros por query (`search` por nombre o codigo, `category`, `status`,
+ * Acepta filtros por query (`search` por palabras, ver lib/search.ts; `category`, `status`,
  * `limit`) para que el dia que
  * el catalogo crezca se pueda filtrar en la base de datos. El panel, ademas,
  * sigue filtrando en cliente sobre la lista ya cargada para que la busqueda sea
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         : undefined
 
     const where: Prisma.ProductWhereInput = search
-      ? productSearchWhere(search.slice(0, 120))
+      ? await productSearchWhere(search.slice(0, 120))
       : {}
     if (category && category !== 'all') {
       // Solo se valida el formato: una categoria inexistente devuelve [].

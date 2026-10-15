@@ -6,7 +6,9 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Minus, Plus, ShoppingBag, MessageCircle, Trash2, CreditCard } from "lucide-react"
 import { remainingStock, useCartStore } from "@/lib/cart-store"
-import { getEffectivePrice, hasPromotion } from "@/lib/products"
+import { getEffectivePrice, hasPromotion, whatsappRef } from "@/lib/products"
+import type { Product } from "@/lib/products"
+import { API_ROUTES, api } from "@/lib/api/client"
 import { formatPrice } from "@/lib/format"
 import { VideoFrame } from "@/components/video-frame"
 
@@ -24,7 +26,26 @@ export function CartDrawer() {
     clearCart,
     stockNotice,
     clearStockNotice,
+    setProductCodes,
   } = useCartStore()
+
+  // Un carrito guardado antes de que existiera la referencia no la tiene: al
+  // abrirlo se completa con el catalogo para que el mensaje de WhatsApp la
+  // lleve. Si falla, el mensaje sale igual, sin referencia.
+  const missingCodes = isOpen && items.some((item) => !item.product.code)
+  useEffect(() => {
+    if (!missingCodes) return
+    let active = true
+    api
+      .get<Product[]>(API_ROUTES.publicProducts)
+      .then((products) => {
+        if (active) setProductCodes(new Map(products.map((p) => [p.id, p.code])))
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [missingCodes, setProductCodes])
 
   // El aviso de stock desaparece solo; al cerrar el carrito, al instante.
   useEffect(() => {
@@ -43,7 +64,7 @@ export function CartDrawer() {
     const itemLines = items.map((item) => {
       const sizeText = item.size ? ` ${item.size}` : ""
       const colorText = item.color ? ` ${item.color}` : ""
-      return `- ${item.product.name}${sizeText}${colorText} x${item.quantity}`
+      return `• ${item.product.name}${sizeText}${colorText}${whatsappRef(item.product)} x${item.quantity}`
     })
 
     const message = `Hola, quiero confirmar este pedido:\n\n${itemLines.join("\n")}\n\nTotal: ${formatPrice(totalPrice())}`

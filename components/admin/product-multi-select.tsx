@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { useCategories } from './categories-provider'
 import { formatPrice } from '@/lib/admin/format'
 import type { AdminProduct } from '@/lib/admin/types'
+import { matchesSearch, searchTokens } from '@/lib/search'
 import { ProductThumb } from './product-thumb'
 
 /**
@@ -35,11 +36,9 @@ export function ProductMultiSelect({
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
 
   const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    if (!term) return products
-    return products.filter((product) =>
-      product.name.toLowerCase().includes(term),
-    )
+    const tokens = searchTokens(search)
+    if (tokens.length === 0) return products
+    return products.filter((product) => matchesSearch(product, tokens))
   }, [products, search])
 
   const toggle = (id: string) => {

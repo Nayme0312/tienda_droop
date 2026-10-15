@@ -17,7 +17,7 @@ import {
   VolumeX,
 } from "lucide-react"
 import type { Product } from "@/lib/products"
-import { categoryLabels, getEffectivePrice } from "@/lib/products"
+import { categoryLabels, getEffectivePrice, whatsappRef } from "@/lib/products"
 import { formatPrice } from "@/lib/format"
 import {
   STOCK_LIMIT_MESSAGE,
@@ -132,7 +132,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
     const promoText = product.promotion
       ? `\n(Promocion "${product.promotion.name}": -${product.promotion.discountPercent}%)`
       : ""
-    const message = `Hola, me interesa este producto:\n\n- ${product.name}${sizeText}${colorText} x${quantity}${promoText}\n\nTotal: ${formatPrice(unitPrice * quantity)}\n\nMe gustaria hacer el pedido.`
+    const message = `Hola, me interesa este producto:\n\n• ${product.name}${sizeText}${colorText}${whatsappRef(product)} x${quantity}${promoText}\n\nTotal: ${formatPrice(unitPrice * quantity)}\n\nMe gustaria hacer el pedido.`
     const encoded = encodeURIComponent(message)
     window.open(`https://wa.me/?text=${encoded}`, "_blank")
   }

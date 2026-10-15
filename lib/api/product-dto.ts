@@ -107,36 +107,6 @@ export function toAdminProduct(
 
 export const PLACEHOLDER_IMAGE = '/placeholder.svg'
 
-const MAX_CODE = 2_147_483_647
-
-/**
- * Filtro de busqueda por nombre o por codigo.
- *
- *  - Nombre: coincidencia parcial sin distinguir mayusculas ("tok" -> Tokyo).
- *  - Codigo: si el texto son solo digitos, tambien se buscan los codigos que
- *    EMPIEZAN por esos digitos ("100" -> 100, 1000-1009, 10000-10099...; "1007"
- *    -> 1007). Se expresa como rangos numericos para que PostgreSQL use el
- *    indice unico de `code` en lugar de convertir cada codigo a texto.
- */
-export function productSearchWhere(search: string): Prisma.ProductWhereInput {
-  const byName: Prisma.ProductWhereInput = {
-    name: { contains: search, mode: 'insensitive' },
-  }
-  if (!/^[1-9]\d{0,9}$/.test(search)) return byName
-
-  const prefix = Number(search)
-  const ranges: Prisma.ProductWhereInput[] = []
-  for (let scale = 1; prefix * scale <= MAX_CODE; scale *= 10) {
-    ranges.push({
-      code: {
-        gte: prefix * scale,
-        lte: Math.min(prefix * scale + scale - 1, MAX_CODE),
-      },
-    })
-  }
-  return { OR: [byName, ...ranges] }
-}
-
 /**
  * Normaliza una URL de imagen antes de guardarla.
  *

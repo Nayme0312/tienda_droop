@@ -46,6 +46,7 @@ function toPublicProduct(
 
   return {
     id: product.id,
+    code: product.code,
     slug: product.slug,
     name: product.name,
     description: product.description,

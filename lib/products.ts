@@ -42,6 +42,12 @@ export interface ProductPromotion {
  */
 export interface Product {
   id: string
+  /**
+   * Referencia del producto (Product.code: 1000, 1001...). La muestra la
+   * tarjeta y va en el mensaje de WhatsApp para identificarlo sin ambiguedad.
+   * Puede faltar en carritos guardados antes de que existiera.
+   */
+  code: number
   slug: string
   name: string
   description: string
@@ -87,6 +93,15 @@ export interface Product {
  */
 export function getEffectivePrice(product: Product): number {
   return product.discountedPrice ?? product.price
+}
+
+/**
+ * " [Ref: 1001]" para el mensaje de WhatsApp, o "" (sin espacio sobrante) si
+ * el producto no tiene referencia, como en un carrito guardado antes de que
+ * existiera y que no se pudo completar (ver setProductCodes en cart-store).
+ */
+export function whatsappRef(product: Product): string {
+  return product.code ? ` [Ref: ${product.code}]` : ""
 }
 
 /** true si el producto tiene una promocion vigente aplicada. */

@@ -17,6 +17,7 @@ import { CartDrawer } from "@/components/cart-drawer"
 import { Footer } from "@/components/footer"
 import { CapSizeCalculator } from "@/components/cap-size-calculator"
 import type { Product, StoreSection } from "@/lib/products"
+import { matchesSearch, searchTokens } from "@/lib/search"
 import type { PublicCapType } from "@/lib/caps/cap-types"
 import {
   EASE_OUT,
@@ -106,9 +107,8 @@ export function CatalogPage({
   }
 
   const filtered = useMemo(() => {
-    let result = allProducts.filter((p) =>
-      p.name.toLowerCase().includes(search.toLowerCase())
-    )
+    const tokens = searchTokens(search)
+    let result = allProducts.filter((p) => matchesSearch(p, tokens))
     if (isCaps) {
       // Con la guia aplicada manda la talla, no el tipo elegido.
       if (sizeActive && appliedSize) return capsInSize(result, appliedSize)

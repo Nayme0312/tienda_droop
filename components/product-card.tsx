@@ -158,11 +158,20 @@ export function ProductCard({ product, index, onQuickView }: ProductCardProps) {
 
       {/* Info: el nombre se subraya de izquierda a derecha al pasar el mouse */}
       <div className="mt-3 space-y-1">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground sm:text-sm">
-          <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-left-bottom bg-no-repeat pb-0.5 transition-[background-size] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:bg-[length:100%_1px]">
-            {product.name}
-          </span>
-        </h3>
+        {/* Referencia en la esquina, pequena y atenuada para no competir con
+            el nombre; es la que el cliente ve repetida en WhatsApp */}
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="min-w-0 text-xs font-semibold uppercase tracking-wide text-foreground sm:text-sm">
+            <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-left-bottom bg-no-repeat pb-0.5 transition-[background-size] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:bg-[length:100%_1px]">
+              {product.name}
+            </span>
+          </h3>
+          {product.code ? (
+            <span className="shrink-0 text-[10px] tabular-nums tracking-wider text-muted-foreground/70">
+              Ref. {product.code}
+            </span>
+          ) : null}
+        </div>
         <StorePrice product={product} />
       </div>
     </motion.div>
